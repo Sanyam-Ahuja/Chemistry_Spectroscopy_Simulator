@@ -40,6 +40,9 @@ function App() {
           </p>
         </header>
         
+        {/* Advanced Spectrum Wheel - Top Priority */}
+        <RotatingDisk />
+        
         {/* Main Visualizer */}
         <WavelengthVisualizer 
           initialWavelength={selectedWavelength}
@@ -50,11 +53,8 @@ function App() {
           }}
         />
         
-        {/* Color Wheel and Disk Side by Side */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          <ColorWheel wavelength={selectedWavelength} />
-          <RotatingDisk />
-        </div>
+        {/* Color Wheel */}
+        <ColorWheel wavelength={selectedWavelength} />
         
         {/* Examples */}
         <Examples onExampleClick={handleExampleClick} selectedExample={selectedExample} />
