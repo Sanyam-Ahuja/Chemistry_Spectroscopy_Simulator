@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SpectrumBar from './SpectrumBar';
-import { getAbsorbedColor, getObservedColor, getObservedColorMultiRange, getColorBand } from '../utils/colorUtils';
+import { getAbsorbedColor, getObservedColor, getObservedColorMultiRange} from '../utils/colorUtils';
 
 const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = [], onManualChange }) => {
   const [inputMode, setInputMode] = useState('single'); // 'single' or 'range'
@@ -159,7 +159,7 @@ const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = []
     observedColor = getObservedColorMultiRange(absorptionRanges, mode);
   }
   
-  const colorBand = getColorBand(wavelength);
+  // const colorBand = getColorBand(wavelength);
   
   return (
     <div className="bg-white rounded-xl shadow-2xl p-6 space-y-6">
