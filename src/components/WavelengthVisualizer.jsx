@@ -70,7 +70,8 @@ const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = []
   };
   
   const addWavelength = () => {
-    const wl = parseInt(inputValue);
+    // Use the wavelength state, not inputValue, since it's already validated
+    const wl = wavelength;
     
     // Validate wavelength
     if (isNaN(wl)) {
@@ -82,7 +83,7 @@ const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = []
       return;
     }
     
-    // Don't add if already in the array or is the current main wavelength
+    // Don't add if already in the array
     if (wavelengths.includes(wl)) {
       alert('This wavelength is already added');
       return;
@@ -199,36 +200,42 @@ const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = []
 
       {/* Input Controls */}
       {inputMode === 'single' ? (
-        <div className="space-y-4">
+        <div className="space-y-4 fade-in">
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Wavelength (nm)
               </label>
-              <input
-                type="number"
-                min="380"
-                max="780"
-                value={inputValue}
-                onChange={handleWavelengthChange}
-                onBlur={handleBlur}
-                onKeyPress={handleKeyPress}
-                placeholder="Enter 380-780"
-                className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-lg font-semibold"
-              />
+              <div className="tooltip">
+                <input
+                  type="number"
+                  min="380"
+                  max="780"
+                  value={inputValue}
+                  onChange={handleWavelengthChange}
+                  onBlur={handleBlur}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Enter 380-780"
+                  className="w-full px-4 py-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500 text-lg font-semibold"
+                />
+                <span className="tooltiptext">Type exact wavelength value</span>
+              </div>
             </div>
             
-            <button
-              type="button"
-              onClick={addWavelength}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-all"
-            >
-              + Add Wavelength
-            </button>
+            <div className="tooltip">
+              <button
+                type="button"
+                onClick={addWavelength}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-all"
+              >
+                + Add Wavelength
+              </button>
+              <span className="tooltiptext">Add multiple wavelengths (like Chlorophyll)</span>
+            </div>
             
             <div className="flex items-center gap-3 bg-purple-50 px-4 py-2 rounded-lg border-2 border-purple-200">
               <span className="text-sm font-semibold text-gray-700">Color Mode:</span>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer tooltip">
                 <input
                   type="radio"
                   name="mode"
@@ -238,8 +245,9 @@ const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = []
                   className="w-4 h-4"
                 />
                 <span className="text-sm font-medium">Ideal</span>
+                <span className="tooltiptext">Pure complementary color theory</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer tooltip">
                 <input
                   type="radio"
                   name="mode"
@@ -249,31 +257,32 @@ const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = []
                   className="w-4 h-4"
                 />
                 <span className="text-sm font-medium">Real</span>
+                <span className="tooltiptext">Simulates human eye perception</span>
               </label>
             </div>
           </div>
           
           {/* Display added wavelengths */}
           {wavelengths.length > 0 && (
-            <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
-              <h3 className="font-bold text-green-800 mb-3">Added Wavelengths (Multiple Absorptions)</h3>
+            <div className="bg-green-50 p-3 rounded-lg border-2 border-green-300 fade-in">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-bold text-green-800 text-sm">✨ Multiple Wavelengths</h3>
+                <span className="text-xs text-gray-600 italic">Like Chlorophyll-a!</span>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {wavelengths.map((wl, index) => (
-                  <div key={index} className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm border border-green-300">
-                    <span className="font-semibold text-gray-700">{wl} nm</span>
+                  <div key={index} className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg shadow-sm border border-green-400 color-transition">
+                    <span className="font-semibold text-gray-700 text-sm">{wl} nm</span>
                     <button
                       type="button"
                       onClick={() => removeWavelength(wl)}
-                      className="text-red-500 hover:text-red-700 font-bold"
+                      className="text-red-500 hover:text-red-700 font-bold text-lg leading-none"
                     >
                       ×
                     </button>
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-gray-600 italic">
-                💡 Like Chlorophyll-a which absorbs multiple wavelengths!
-              </p>
             </div>
           )}
         </div>
@@ -386,9 +395,10 @@ const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = []
       />
       
       {/* Color Swatches */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-4 border-2 border-purple-200">
-          <h3 className="text-lg font-bold text-purple-700 mb-3">
+      <div className="grid md:grid-cols-2 gap-4 fade-in">
+        <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-4 border-2 border-purple-200 shadow-lg">
+          <h3 className="text-base font-bold text-purple-700 mb-3 flex items-center gap-2">
+            <span>🎨</span>
             {(inputMode === 'range' && absorptionRanges.length > 1) || (inputMode === 'single' && wavelengths.length >= 1) 
               ? 'Absorbed Colors' 
               : 'Absorbed Color'}
@@ -398,12 +408,12 @@ const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = []
               {/* Show main wavelength first */}
               <div className="flex items-center gap-2">
                 <div 
-                  className="w-16 h-16 rounded-lg shadow-lg border-2 border-white flex-shrink-0"
+                  className="w-16 h-16 rounded-lg shadow-lg border-2 border-white flex-shrink-0 color-transition"
                   style={{ backgroundColor: absorbedColor }}
                 />
                 <div className="text-xs">
                   <p className="font-semibold text-gray-700">{wavelength} nm</p>
-                  <p className="text-gray-600 font-mono">{absorbedColor}</p>
+                  <p className="text-gray-600 font-mono text-xs">{absorbedColor}</p>
                 </div>
               </div>
               {/* Show additional wavelengths */}
@@ -412,12 +422,12 @@ const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = []
                 return (
                   <div key={index} className="flex items-center gap-2">
                     <div 
-                      className="w-16 h-16 rounded-lg shadow-lg border-2 border-white flex-shrink-0"
+                      className="w-12 h-12 rounded-lg shadow-md border-2 border-white flex-shrink-0 color-transition"
                       style={{ backgroundColor: wlColor }}
                     />
                     <div className="text-xs">
                       <p className="font-semibold text-gray-700">{wl} nm</p>
-                      <p className="text-gray-600 font-mono">{wlColor}</p>
+                      <p className="text-gray-600 font-mono text-xs">{wlColor}</p>
                     </div>
                   </div>
                 );
@@ -426,49 +436,53 @@ const WavelengthVisualizer = ({ initialWavelength = 450, exampleWavelengths = []
           ) : inputMode === 'range' && absorptionRanges.length > 0 ? (
             <div className="space-y-2">
               {absorptionRanges.map((range, index) => {
-                const midWavelength = (range.min + range.max) / 2;
-                const rangeColor = getAbsorbedColor(midWavelength);
+                const rangeColor = getObservedColorMultiRange([range], 'ideal');
                 return (
                   <div key={index} className="flex items-center gap-2">
                     <div 
-                      className="w-16 h-16 rounded-lg shadow-lg border-2 border-white flex-shrink-0"
+                      className="w-12 h-12 rounded-lg shadow-md border-2 border-white flex-shrink-0 color-transition"
                       style={{ backgroundColor: rangeColor }}
                     />
                     <div className="text-xs">
                       <p className="font-semibold text-gray-700">{range.min}-{range.max} nm</p>
-                      <p className="text-gray-600 font-mono">{rangeColor}</p>
+                      <p className="text-gray-600 font-mono text-xs">{rangeColor}</p>
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <>
+            <div className="flex items-center gap-3">
               <div 
-                className="w-full h-32 rounded-lg shadow-lg border-4 border-white"
+                className="w-20 h-20 rounded-lg shadow-xl border-4 border-white color-transition"
                 style={{ backgroundColor: absorbedColor }}
               />
-              <div className="mt-3 space-y-1">
-                <p className="text-sm font-semibold text-gray-700">
-                  Band: <span className="text-purple-600 capitalize">{colorBand || 'N/A'}</span>
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-1">
+                  {wavelength} nm
                 </p>
                 <p className="text-xs text-gray-600 font-mono">{absorbedColor}</p>
               </div>
-            </>
+            </div>
           )}
         </div>
         
-        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200">
-          <h3 className="text-lg font-bold text-blue-700 mb-3">Observed Color (Appears)</h3>
-          <div 
-            className="w-full h-32 rounded-lg shadow-lg border-4 border-white"
-            style={{ backgroundColor: observedColor }}
-          />
-          <div className="mt-3 space-y-1">
-            <p className="text-sm font-semibold text-gray-700">
-              The compound appears this color
-            </p>
-            <p className="text-xs text-gray-600 font-mono">{observedColor}</p>
+        <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-4 border-2 border-green-200 shadow-lg">
+          <h3 className="text-base font-bold text-green-700 mb-3 flex items-center gap-2">
+            <span>👁️</span>
+            Observed Color
+          </h3>
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-20 h-20 rounded-lg shadow-xl border-4 border-white color-transition"
+              style={{ backgroundColor: observedColor }}
+            />
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-1">
+                What you see
+              </p>
+              <p className="text-xs text-gray-600 font-mono">{observedColor}</p>
+            </div>
           </div>
         </div>
       </div>
