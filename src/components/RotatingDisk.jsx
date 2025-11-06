@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { wavelengthToRGB, rgbToHex, getComplementaryRGB } from '../utils/colorUtils';
+import { wavelengthToRGB, rgbToHex } from '../utils/colorUtils';
 
 const RotatingDisk = () => {
   const [excludedRanges, setExcludedRanges] = useState([]);
   const [isRotating, setIsRotating] = useState(false);
-  const [mode, setMode] = useState('ideal');
   const [rangeMin, setRangeMin] = useState('380');
   const [rangeMax, setRangeMax] = useState('450');
   const canvasRef = useRef(null);
@@ -13,70 +12,63 @@ const RotatingDisk = () => {
   const speedRef = useRef(0);
   const blendFactorRef = useRef(0);
   
-  // Helper function to get excluded wavelength count
-  const getExcludedWavelengthCount = () => {
-    let count = 0;
-    excludedRanges.forEach(range => {
-      count += (range.max - range.min + 1);
-    });
-    return count;
-  };
-  
-  // Calculate the mixed color RGB values (for interpolation)
-  const calculateMixedColorRGB = () => {
-    const step = 2; // Sample every 2nm for better accuracy
-    let r = 0, g = 0, b = 0, count = 0;
-    
-    for (let wl = 380; wl <= 780; wl += step) {
-      const isExcluded = excludedRanges.some(range => 
-        wl >= range.min && wl <= range.max
-      );
-      
-      if (!isExcluded) {
-        const rgb = wavelengthToRGB(wl);
-        r += rgb.r;
-        g += rgb.g;
-        b += rgb.b;
-        count++;
-      }
-    }
-    
-    if (count === 0) return { r: 0, g: 0, b: 0 }; // All excluded = black
-    
-    // For full spectrum (no exclusions), boost to white
-    const totalPossible = 201; // (780-380)/2 + 1
-    const completeness = count / totalPossible;
-    
-    if (completeness > 0.95) {
-      // If nearly all wavelengths present, return pure white
-      return { r: 255, g: 255, b: 255 };
-    }
-    
-    // Calculate average
-    r = r / count;
-    g = g / count;
-    b = b / count;
-    
-    // Boost brightness for better color representation
-    const max = Math.max(r, g, b);
-    if (max > 0) {
-      const boost = Math.min(255 / max, 1.5);
-      r = Math.min(255, Math.round(r * boost));
-      g = Math.min(255, Math.round(g * boost));
-      b = Math.min(255, Math.round(b * boost));
-    }
-    
-    return { r, g, b };
-  };
-  
-  // Calculate the mixed color as hex (for display)
-  const calculateMixedColor = () => {
-    const rgb = calculateMixedColorRGB();
-    return rgbToHex(rgb.r, rgb.g, rgb.b);
-  };
-  
   // Draw the continuous spectrum wheel
   const drawDisk = React.useCallback(() => {
+    // Helper function to get excluded wavelength count
+    const getExcludedWavelengthCount = () => {
+      let count = 0;
+      excludedRanges.forEach(range => {
+        count += (range.max - range.min + 1);
+      });
+      return count;
+    };
+    
+    // Calculate the mixed color RGB values (for interpolation)
+    const calculateMixedColorRGB = () => {
+      const step = 2; // Sample every 2nm for better accuracy
+      let r = 0, g = 0, b = 0, count = 0;
+      
+      for (let wl = 380; wl <= 780; wl += step) {
+        const isExcluded = excludedRanges.some(range => 
+          wl >= range.min && wl <= range.max
+        );
+        
+        if (!isExcluded) {
+          const rgb = wavelengthToRGB(wl);
+          r += rgb.r;
+          g += rgb.g;
+          b += rgb.b;
+          count++;
+        }
+      }
+      
+      if (count === 0) return { r: 0, g: 0, b: 0 }; // All excluded = black
+      
+      // For full spectrum (no exclusions), boost to white
+      const totalPossible = 201; // (780-380)/2 + 1
+      const completeness = count / totalPossible;
+      
+      if (completeness > 0.95) {
+        // If nearly all wavelengths present, return pure white
+        return { r: 255, g: 255, b: 255 };
+      }
+      
+      // Calculate average
+      r = r / count;
+      g = g / count;
+      b = b / count;
+      
+      // Boost brightness for better color representation
+      const max = Math.max(r, g, b);
+      if (max > 0) {
+        const boost = Math.min(255 / max, 1.5);
+        r = Math.min(255, Math.round(r * boost));
+        g = Math.min(255, Math.round(g * boost));
+        b = Math.min(255, Math.round(b * boost));
+      }
+      
+      return { r, g, b };
+    };
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -235,6 +227,58 @@ const RotatingDisk = () => {
   useEffect(() => {
     drawDisk();
   }, [drawDisk]);
+  
+  // Helper to get excluded wavelength count (for display in UI)
+  const getExcludedWavelengthCount = () => {
+    let count = 0;
+    excludedRanges.forEach(range => {
+      count += (range.max - range.min + 1);
+    });
+    return count;
+  };
+  
+  // Calculate the mixed color as hex (for display in UI)
+  const calculateMixedColor = () => {
+    const step = 2;
+    let r = 0, g = 0, b = 0, count = 0;
+    
+    for (let wl = 380; wl <= 780; wl += step) {
+      const isExcluded = excludedRanges.some(range => 
+        wl >= range.min && wl <= range.max
+      );
+      
+      if (!isExcluded) {
+        const rgb = wavelengthToRGB(wl);
+        r += rgb.r;
+        g += rgb.g;
+        b += rgb.b;
+        count++;
+      }
+    }
+    
+    if (count === 0) return '#000000';
+    
+    const totalPossible = 201;
+    const completeness = count / totalPossible;
+    
+    if (completeness > 0.95) {
+      return '#FFFFFF';
+    }
+    
+    r = r / count;
+    g = g / count;
+    b = b / count;
+    
+    const max = Math.max(r, g, b);
+    if (max > 0) {
+      const boost = Math.min(255 / max, 1.5);
+      r = Math.min(255, Math.round(r * boost));
+      g = Math.min(255, Math.round(g * boost));
+      b = Math.min(255, Math.round(b * boost));
+    }
+    
+    return rgbToHex(r, g, b);
+  };
   
   const addExcludedRange = () => {
     const min = parseInt(rangeMin);
