@@ -10,6 +10,70 @@ const RotatingDisk = () => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const rotationRef = useRef(0);
+  const speedRef = useRef(0);
+  const blendFactorRef = useRef(0);
+  
+  // Helper function to get excluded wavelength count
+  const getExcludedWavelengthCount = () => {
+    let count = 0;
+    excludedRanges.forEach(range => {
+      count += (range.max - range.min + 1);
+    });
+    return count;
+  };
+  
+  // Calculate the mixed color RGB values (for interpolation)
+  const calculateMixedColorRGB = () => {
+    const step = 2; // Sample every 2nm for better accuracy
+    let r = 0, g = 0, b = 0, count = 0;
+    
+    for (let wl = 380; wl <= 780; wl += step) {
+      const isExcluded = excludedRanges.some(range => 
+        wl >= range.min && wl <= range.max
+      );
+      
+      if (!isExcluded) {
+        const rgb = wavelengthToRGB(wl);
+        r += rgb.r;
+        g += rgb.g;
+        b += rgb.b;
+        count++;
+      }
+    }
+    
+    if (count === 0) return { r: 0, g: 0, b: 0 }; // All excluded = black
+    
+    // For full spectrum (no exclusions), boost to white
+    const totalPossible = 201; // (780-380)/2 + 1
+    const completeness = count / totalPossible;
+    
+    if (completeness > 0.95) {
+      // If nearly all wavelengths present, return pure white
+      return { r: 255, g: 255, b: 255 };
+    }
+    
+    // Calculate average
+    r = r / count;
+    g = g / count;
+    b = b / count;
+    
+    // Boost brightness for better color representation
+    const max = Math.max(r, g, b);
+    if (max > 0) {
+      const boost = Math.min(255 / max, 1.5);
+      r = Math.min(255, Math.round(r * boost));
+      g = Math.min(255, Math.round(g * boost));
+      b = Math.min(255, Math.round(b * boost));
+    }
+    
+    return { r, g, b };
+  };
+  
+  // Calculate the mixed color as hex (for display)
+  const calculateMixedColor = () => {
+    const rgb = calculateMixedColorRGB();
+    return rgbToHex(rgb.r, rgb.g, rgb.b);
+  };
   
   // Draw the continuous spectrum wheel
   const drawDisk = React.useCallback(() => {
@@ -29,49 +93,51 @@ const RotatingDisk = () => {
     ctx.rotate(rotationRef.current);
     ctx.translate(-centerX, -centerY);
     
-    if (isRotating) {
-      // When rotating, show the mixed result color
-      const resultColor = calculateMixedColor();
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = resultColor;
-      ctx.fill();
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 5;
-      ctx.stroke();
-    } else {
-      // Draw continuous spectrum with fine segments
-      const totalSegments = 400; // 400 segments for smooth gradient (380-780 = 400nm)
-      const anglePerSegment = (2 * Math.PI) / totalSegments;
+    // Draw continuous spectrum with fine segments
+    const totalSegments = 400; // 400 segments for smooth gradient (380-780 = 400nm)
+    const anglePerSegment = (2 * Math.PI) / totalSegments;
+    const blendFactor = blendFactorRef.current; // 0 = individual colors, 1 = fully mixed
+    
+    for (let i = 0; i < totalSegments; i++) {
+      const wavelength = 380 + (i / totalSegments) * 400; // 380 to 780 nm
+      const isExcluded = excludedRanges.some(range => 
+        wavelength >= range.min && wavelength <= range.max
+      );
       
-      for (let i = 0; i < totalSegments; i++) {
-        const wavelength = 380 + (i / totalSegments) * 400; // 380 to 780 nm
-        const isExcluded = excludedRanges.some(range => 
-          wavelength >= range.min && wavelength <= range.max
-        );
+      const startAngle = i * anglePerSegment - Math.PI / 2;
+      const endAngle = startAngle + anglePerSegment;
+      
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.closePath();
+      
+      if (isExcluded) {
+        // Excluded wavelengths appear dimmed/grayed
+        ctx.fillStyle = '#1a1a1a';
+      } else {
+        // Get the original wavelength color
+        const rgb = wavelengthToRGB(wavelength);
+        const originalColor = { r: rgb.r, g: rgb.g, b: rgb.b };
         
-        const startAngle = i * anglePerSegment - Math.PI / 2;
-        const endAngle = startAngle + anglePerSegment;
+        // Get the mixed result color
+        const mixedRgb = calculateMixedColorRGB();
         
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-        ctx.closePath();
+        // Interpolate between original and mixed based on blend factor
+        const r = Math.round(originalColor.r * (1 - blendFactor) + mixedRgb.r * blendFactor);
+        const g = Math.round(originalColor.g * (1 - blendFactor) + mixedRgb.g * blendFactor);
+        const b = Math.round(originalColor.b * (1 - blendFactor) + mixedRgb.b * blendFactor);
         
-        if (isExcluded) {
-          // Excluded wavelengths appear dimmed/grayed
-          ctx.fillStyle = '#1a1a1a';
-        } else {
-          // Active wavelengths show their true color
-          const rgb = wavelengthToRGB(wavelength);
-          ctx.fillStyle = rgbToHex(rgb.r, rgb.g, rgb.b);
-        }
-        
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
+        ctx.fillStyle = rgbToHex(r, g, b);
       }
+      
+      ctx.fill();
+      
+      // Fade out segment borders as we blend
+      const borderOpacity = 0.1 * (1 - blendFactor);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${borderOpacity})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
     }
     
     ctx.restore();
@@ -94,22 +160,55 @@ const RotatingDisk = () => {
     ctx.fillText(`${activeCount}`, centerX, centerY - 5);
     ctx.font = '8px Arial';
     ctx.fillText('nm', centerX, centerY + 8);
-  }, [excludedRanges, isRotating, mode]);
+  }, [excludedRanges]);
   
-  // Animation loop for rotation
+  // Animation loop for rotation with acceleration and blending
   useEffect(() => {
     if (isRotating) {
+      const maxSpeed = 0.3;
+      const acceleration = 0.005;
+      const blendSpeed = 0.02;
+      
       const animate = () => {
-        rotationRef.current += 0.05; // Rotation speed
+        // Accelerate rotation speed
+        if (speedRef.current < maxSpeed) {
+          speedRef.current += acceleration;
+        }
+        
+        // Increase blend factor as speed increases (colors start mixing)
+        if (blendFactorRef.current < 1) {
+          blendFactorRef.current = Math.min(1, blendFactorRef.current + blendSpeed);
+        }
+        
+        rotationRef.current += speedRef.current;
         drawDisk();
         animationRef.current = requestAnimationFrame(animate);
       };
       animationRef.current = requestAnimationFrame(animate);
     } else {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
+      // Decelerate when stopping
+      if (speedRef.current > 0 || blendFactorRef.current > 0) {
+        const decelerate = () => {
+          speedRef.current = Math.max(0, speedRef.current - 0.01);
+          blendFactorRef.current = Math.max(0, blendFactorRef.current - 0.03);
+          rotationRef.current += speedRef.current;
+          drawDisk();
+          
+          if (speedRef.current > 0 || blendFactorRef.current > 0) {
+            animationRef.current = requestAnimationFrame(decelerate);
+          } else {
+            if (animationRef.current) {
+              cancelAnimationFrame(animationRef.current);
+            }
+          }
+        };
+        animationRef.current = requestAnimationFrame(decelerate);
+      } else {
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+        }
+        drawDisk();
       }
-      drawDisk();
     }
     
     return () => {
@@ -122,43 +221,6 @@ const RotatingDisk = () => {
   useEffect(() => {
     drawDisk();
   }, [drawDisk]);
-  
-  // Calculate the mixed color when certain wavelengths are excluded
-  const calculateMixedColor = () => {
-    const step = 5; // Sample every 5nm
-    let r = 0, g = 0, b = 0, count = 0;
-    
-    for (let wl = 380; wl <= 780; wl += step) {
-      const isExcluded = excludedRanges.some(range => 
-        wl >= range.min && wl <= range.max
-      );
-      
-      if (!isExcluded) {
-        const rgb = wavelengthToRGB(wl);
-        r += rgb.r;
-        g += rgb.g;
-        b += rgb.b;
-        count++;
-      }
-    }
-    
-    if (count === 0) return '#000000'; // All excluded = black
-    if (count === 80) return '#FFFFFF'; // None excluded = white
-    
-    r = Math.round(r / count);
-    g = Math.round(g / count);
-    b = Math.round(b / count);
-    
-    return rgbToHex(r, g, b);
-  };
-  
-  const getExcludedWavelengthCount = () => {
-    let count = 0;
-    excludedRanges.forEach(range => {
-      count += (range.max - range.min + 1);
-    });
-    return count;
-  };
   
   const addExcludedRange = () => {
     const min = parseInt(rangeMin);
