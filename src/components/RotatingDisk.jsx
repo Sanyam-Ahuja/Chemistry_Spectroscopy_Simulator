@@ -93,29 +93,44 @@ const RotatingDisk = () => {
     ctx.rotate(rotationRef.current);
     ctx.translate(-centerX, -centerY);
     
-    // Draw continuous spectrum with fine segments
-    const totalSegments = 400; // 400 segments for smooth gradient (380-780 = 400nm)
-    const anglePerSegment = (2 * Math.PI) / totalSegments;
-    const blendFactor = blendFactorRef.current; // 0 = individual colors, 1 = fully mixed
+    // First, collect all active (non-excluded) wavelengths
+    const totalSegments = 400;
+    const activeWavelengths = [];
     
     for (let i = 0; i < totalSegments; i++) {
-      const wavelength = 380 + (i / totalSegments) * 400; // 380 to 780 nm
+      const wavelength = 380 + (i / totalSegments) * 400;
       const isExcluded = excludedRanges.some(range => 
         wavelength >= range.min && wavelength <= range.max
       );
       
-      const startAngle = i * anglePerSegment - Math.PI / 2;
-      const endAngle = startAngle + anglePerSegment;
-      
+      if (!isExcluded) {
+        activeWavelengths.push(wavelength);
+      }
+    }
+    
+    // If no active wavelengths, draw black circle
+    if (activeWavelengths.length === 0) {
       ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-      ctx.closePath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    } else {
+      // Draw only active wavelengths, expanded to fill the full circle
+      const blendFactor = blendFactorRef.current;
+      const anglePerSegment = (2 * Math.PI) / activeWavelengths.length;
       
-      if (isExcluded) {
-        // Excluded wavelengths appear dimmed/grayed
-        ctx.fillStyle = '#1a1a1a';
-      } else {
+      activeWavelengths.forEach((wavelength, index) => {
+        const startAngle = index * anglePerSegment - Math.PI / 2;
+        const endAngle = startAngle + anglePerSegment;
+        
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.closePath();
+        
         // Get the original wavelength color
         const rgb = wavelengthToRGB(wavelength);
         const originalColor = { r: rgb.r, g: rgb.g, b: rgb.b };
@@ -129,15 +144,14 @@ const RotatingDisk = () => {
         const b = Math.round(originalColor.b * (1 - blendFactor) + mixedRgb.b * blendFactor);
         
         ctx.fillStyle = rgbToHex(r, g, b);
-      }
-      
-      ctx.fill();
-      
-      // Fade out segment borders as we blend
-      const borderOpacity = 0.1 * (1 - blendFactor);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${borderOpacity})`;
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
+        ctx.fill();
+        
+        // Fade out segment borders as we blend
+        const borderOpacity = 0.08 * (1 - blendFactor);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${borderOpacity})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      });
     }
     
     ctx.restore();
