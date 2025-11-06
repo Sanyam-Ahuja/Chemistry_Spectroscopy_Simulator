@@ -3,6 +3,7 @@ import WavelengthVisualizer from './components/WavelengthVisualizer';
 import ColorWheel from './components/ColorWheel';
 import RotatingDisk from './components/RotatingDisk';
 import Examples from './components/Examples';
+import Footer from './components/Footer';
 import { EXAMPLES } from './utils/colorUtils';
 
 function App() {
@@ -57,17 +58,10 @@ function App() {
         
         {/* Examples */}
         <Examples onExampleClick={handleExampleClick} selectedExample={selectedExample} />
-        
-        {/* Footer */}
-        <footer className="text-center text-white mt-12 pb-4">
-          <p className="text-sm opacity-80">
-            Built with React + Tailwind CSS | Interactive Spectroscopy Education Tool
-          </p>
-          <p className="text-xs opacity-60 mt-2">
-            Ideal Mode uses complementary color theory • Real Mode simulates human perception
-          </p>
-        </footer>
       </div>
+      
+      {/* Footer with Credits */}
+      <Footer />
     </div>
   );
 }
